@@ -1,0 +1,6 @@
+{
+  "name": "series-score-estimator",
+  "private": true,
+  "description": "Browser UI checks for Series Score Estimator",
+  "devDependencies": { "jsdom": "^31.0.0" }
+}

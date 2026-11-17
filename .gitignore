@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.pytest_cache/
+node_modules/
+imdb_data/
+tmdb_cache/
+output/
+model_output/
+site_assets/
+hf_release/
+space/assets/
+*.joblib
+*.parquet
+*.bin.gz
+.env

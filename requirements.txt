@@ -1,0 +1,10 @@
+numpy
+pandas
+requests
+tqdm
+scikit-learn
+xgboost
+matplotlib
+joblib
+pyarrow
+huggingface_hub

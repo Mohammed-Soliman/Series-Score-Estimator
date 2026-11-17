@@ -1,0 +1,350 @@
+<!DOCTYPE html><html class="dark" lang="en"><head><title>Series Score Estimator: pre-release rating predictor</title><meta name="description" content="Estimate the audience score of an upcoming TV series from information known before it premieres."><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_standard" name="shell-type"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-tertiary-container": "#780021", "on-secondary-container": "#5b3800", "on-tertiary": "#67001b", "inverse-on-surface": "#283044", "primary": "#4edea3", "secondary-fixed": "#ffddb8", "secondary-container": "#ee9800", "background": "#0b1326", "on-surface": "#dae2fd", "surface-tint": "#4edea3", "outline-variant": "#3c4a42", "error-container": "#93000a", "on-tertiary-fixed-variant": "#92002a", "on-secondary-fixed": "#2a1700", "primary-container": "#10b981", "outline": "#86948a", "on-primary-fixed": "#002113", "surface-container-lowest": "#060e20", "on-secondary": "#472a00", "on-error-container": "#ffdad6", "surface-container-low": "#131b2e", "secondary": "#ffb95f", "secondary-fixed-dim": "#ffb95f", "on-background": "#dae2fd", "error": "#ffb4ab", "on-tertiary-fixed": "#40000d", "surface-dim": "#0b1326", "surface-container-highest": "#2d3449", "inverse-primary": "#006c49", "inverse-surface": "#dae2fd", "on-surface-variant": "#bbcabf", "on-primary-fixed-variant": "#005236", "on-secondary-fixed-variant": "#653e00", "tertiary-fixed-dim": "#ffb2b7", "surface-bright": "#31394d", "tertiary-container": "#ff7886", "surface-variant": "#2d3449", "surface-container": "#171f33", "primary-fixed": "#6ffbbe", "on-error": "#690005", "primary-fixed-dim": "#4edea3", "on-primary-container": "#00422b", "on-primary": "#003824", "surface": "#0b1326", "tertiary": "#ffb2b7", "surface-container-high": "#222a3d", "tertiary-fixed": "#ffdadb" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "space-xs": "0.25rem", "space-md": "1rem", "space-xl": "2.25rem", "margin-lg": "3rem", "space-sm": "0.5rem", "margin-md": "2rem", "margin": "1rem", "space-lg": "1.5rem", "gutter-lg": "1.75rem", "gutter": "1.25rem" }, "fontFamily": { "headline-md": [ "Plus Jakarta Sans" ], "label-sm": [ "Inter" ], "headline-lg-mobile": [ "Plus Jakarta Sans" ], "metric-xl": [ "Inter" ], "metric-md": [ "Inter" ], "headline-sm": [ "Plus Jakarta Sans" ], "body-md": [ "Inter" ], "body-lg": [ "Inter" ], "display-mobile": [ "Plus Jakarta Sans" ], "display": [ "Plus Jakarta Sans" ], "body-sm": [ "Inter" ], "headline-lg": [ "Plus Jakarta Sans" ], "label-md": [ "Inter" ] }, "fontSize": { "headline-md": [ "24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600" } ], "label-sm": [ "11px", { "lineHeight": "14px", "letterSpacing": "0.05em", "fontWeight": "600" } ], "headline-lg-mobile": [ "26px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "700" } ], "metric-xl": [ "44px", { "lineHeight": "48px", "letterSpacing": "-0.03em", "fontWeight": "700" } ], "metric-md": [ "28px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" } ], "headline-sm": [ "18px", { "lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "body-md": [ "14px", { "lineHeight": "20px", "fontWeight": "400" } ], "body-lg": [ "16px", { "lineHeight": "24px", "fontWeight": "400" } ], "display-mobile": [ "36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "800" } ], "display": [ "48px", { "lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "800" } ], "body-sm": [ "12px", { "lineHeight": "18px", "fontWeight": "400" } ], "headline-lg": [ "32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" } ], "label-md": [ "13px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" } ] } } } };</script><style>
+.dial{transition:stroke-dashoffset 1s ease-out}
+.clamp3{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+@keyframes spin{to{transform:rotate(360deg)}}.spin{animation:spin 1s linear infinite}
+.fadein{animation:fi .35s ease-out}@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+html{scroll-behavior:smooth}
+</style></head><body class="bg-background font-body-md text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<header class="fixed top-0 left-0 right-0 z-50 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)]">
+  <div class="h-16 w-full px-gutter lg:px-gutter-lg flex items-center justify-between">
+    <div class="flex items-center gap-space-md">
+      <a href="#estimator" class="flex items-center gap-space-sm">
+        <svg class="h-8 w-8" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#10b981"/><path d="M7 21l5-6 4 3 6-8 3 4" fill="none" stroke="#003824" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="14" r="2" fill="#003824"/></svg>
+        <span class="font-headline-sm text-headline-sm text-on-surface tracking-tight font-bold">Series Score Estimator</span>
+      </a>
+      <span id="trainBadge" class="hidden lg:inline-flex items-center px-space-sm py-space-xs rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm uppercase tracking-wider"></span>
+      <nav class="hidden md:flex items-center gap-space-xs pl-space-md">
+        <a class="px-space-md py-space-sm bg-primary-container text-on-primary-container rounded-lg font-medium font-label-md text-label-md" href="#estimator">Estimator</a>
+        <a class="px-space-md py-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-colors font-label-md text-label-md" href="#benchmarks">Model benchmarks</a>
+        <a class="px-space-md py-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-colors font-label-md text-label-md" href="#method">Methodology</a>
+      </nav>
+    </div>
+    <div id="statusChip" class="flex items-center gap-space-xs px-space-sm py-space-xs rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm" title="">
+      <span class="w-2 h-2 rounded-full bg-outline"></span><span>Checking…</span>
+    </div>
+  </div>
+</header>
+
+<main class="w-full pt-16 bg-background min-h-screen">
+<div class="flex flex-col w-full">
+
+<!-- ============ ESTIMATOR ============ -->
+<section id="estimator" class="relative w-full px-gutter lg:px-gutter-lg py-space-xl overflow-hidden">
+  <div class="absolute -top-32 left-1/4 w-96 h-96 bg-primary-container/10 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute top-20 right-10 w-80 h-80 bg-secondary/5 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="max-w-7xl mx-auto flex flex-col gap-space-lg relative z-10">
+
+    <div class="space-y-space-xs">
+      <span class="inline-flex items-center gap-1.5 px-space-sm py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm uppercase tracking-wider"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>Classical machine learning</span>
+      <h1 class="font-headline-lg text-headline-lg text-on-surface font-extrabold tracking-tight">Pre-Release Score Estimator</h1>
+      <p class="font-body-md text-body-md text-on-surface-variant max-w-3xl">Paste the IMDb link of a series that has not finished airing. Three Random Forest models estimate its audience score from what is known <em>before</em> release: genres, network, episode count, age rating, and the earlier work of its cast and creators.</p>
+    </div>
+
+    <div class="bg-surface-container rounded-xl p-space-lg shadow-xl relative overflow-hidden">
+      <div class="flex flex-col gap-space-lg">
+        <div class="flex flex-col lg:flex-row items-stretch gap-space-md">
+          <div class="flex-1 flex flex-col gap-space-xs">
+            <label class="font-label-md text-label-md text-on-surface font-medium flex items-center justify-between flex-wrap gap-1" for="imdbInput">
+              <span>IMDb link or ID of an upcoming series</span>
+              <span id="validationIndicator" class="text-outline font-label-sm text-label-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">info</span>Format: tt followed by 7 to 9 digits</span>
+            </label>
+            <div class="relative flex items-center">
+              <span class="absolute left-space-md text-outline material-symbols-outlined text-[20px] pointer-events-none">movie_filter</span>
+              <input id="imdbInput" type="text" autocomplete="off" spellcheck="false" placeholder="https://www.imdb.com/title/tt1234567/  or  tt1234567" class="w-full bg-surface-container-lowest text-on-surface pl-11 pr-10 py-space-sm rounded-lg font-body-md text-body-md placeholder:text-outline/60 focus:outline-none focus:ring-2 focus:ring-primary-container transition-all">
+              <button id="clearInputBtn" type="button" aria-label="Clear" class="absolute right-space-sm text-outline hover:text-on-surface p-1 rounded-md"><span class="material-symbols-outlined text-[18px]">cancel</span></button>
+            </div>
+          </div>
+          <div class="flex items-end">
+            <button id="estimateBtn" type="button" class="w-full lg:w-auto h-11 px-space-xl bg-primary hover:bg-primary-fixed text-on-primary font-headline-sm text-headline-sm font-semibold rounded-lg flex items-center justify-center gap-space-sm shadow-md transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed">
+              <span id="btnIcon" class="material-symbols-outlined text-[20px]">auto_awesome</span><span id="btnText">Estimate rating</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-space-xs">
+          <span class="font-label-sm text-label-sm text-outline uppercase tracking-wider mr-space-xs">Upcoming now:</span>
+          <div id="presets" class="flex flex-wrap gap-space-xs"><span class="text-outline font-body-sm text-body-sm">loading…</span></div>
+        </div>
+
+        <div class="pt-space-sm flex flex-col md:flex-row md:items-center justify-between gap-space-md">
+          <div id="modelTabs" role="tablist" class="flex flex-wrap items-center gap-space-xs bg-surface-container-lowest p-1 rounded-lg"></div>
+          <label class="inline-flex items-center gap-space-sm cursor-pointer select-none">
+            <input id="showAllModelsToggle" type="checkbox" class="w-4 h-4 rounded text-primary-container bg-surface-container-lowest focus:ring-0 focus:ring-offset-0 cursor-pointer">
+            <span class="font-label-md text-label-md text-on-surface">Show all three models side by side</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- pipeline tracker -->
+    <div id="pipelineTracker" class="hidden bg-surface-container-low rounded-xl p-space-md shadow-md fadein">
+      <div class="flex items-center justify-between pb-space-sm mb-space-sm flex-wrap gap-1">
+        <div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-primary text-[18px]">terminal</span><span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface font-semibold">Inference pipeline</span><span id="pipeSummary" class="text-outline text-body-sm font-body-sm"></span></div>
+      </div>
+      <div id="pipeSteps" class="grid grid-cols-1 md:grid-cols-4 gap-space-sm"></div>
+    </div>
+
+    <div id="alertBox" class="hidden" role="alert" aria-live="assertive"></div>
+    <div id="result" class="flex flex-col gap-space-lg" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- ============ BENCHMARKS ============ -->
+<section id="benchmarks" class="w-full px-gutter lg:px-gutter-lg py-space-xl bg-surface-container-lowest">
+  <div class="max-w-7xl mx-auto flex flex-col gap-space-md">
+    <div><h2 class="font-headline-md text-headline-md font-bold tracking-tight">Model benchmarks</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant max-w-3xl mt-1">Measured on series from the hold-out years, which were never used for training or tuning. The baseline always guesses the training average. MAE is the average miss in score points (lower is better).</p></div>
+    <div class="bg-surface-container rounded-xl overflow-x-auto"><table class="w-full text-left font-body-sm text-body-sm" id="benchTable"></table></div>
+    <div class="flex items-start gap-space-sm p-space-md rounded-xl bg-secondary/10 text-on-surface-variant">
+      <span class="material-symbols-outlined text-secondary text-[20px] mt-0.5">balance</span>
+      <p class="font-body-sm text-body-sm"><strong class="text-on-surface">Read this honestly.</strong> The models beat the baseline by only a few percent. Audience ratings depend mostly on things nobody knows before release (writing, acting, marketing, reception), so pre-release data can only nudge the estimate. Treat every result as a rough guess, not a forecast.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ METHODOLOGY ============ -->
+<section id="method" class="w-full px-gutter lg:px-gutter-lg py-space-xl">
+  <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-space-md">
+    <div class="md:col-span-3"><h2 class="font-headline-md text-headline-md font-bold tracking-tight">Methodology</h2></div>
+    <div class="bg-surface-container rounded-xl p-space-md"><h3 class="font-headline-sm text-headline-sm font-semibold mb-1">Data</h3><p id="mData" class="font-body-sm text-body-sm text-on-surface-variant"></p></div>
+    <div class="bg-surface-container rounded-xl p-space-md"><h3 class="font-headline-sm text-headline-sm font-semibold mb-1">Targets</h3><p class="font-body-sm text-body-sm text-on-surface-variant"><strong class="text-on-surface">IMDb</strong> and <strong class="text-on-surface">TMDB</strong> are the sites' own user ratings. <strong class="text-on-surface">General</strong> is a weighted average of the two, weighting each by log(1 + its vote count). Each target has its own model.</p></div>
+    <div class="bg-surface-container rounded-xl p-space-md"><h3 class="font-headline-sm text-headline-sm font-semibold mb-1">Inputs known before release</h3><p class="font-body-sm text-body-sm text-on-surface-variant">Genres, network, episode runtime and count, age rating, adaptation or remake flags, and the earlier IMDb work (average rating, best rating, number of titles) of the top-billed cast and the creative team. Only work from before the series' premiere year counts, so nothing from the future leaks in.</p></div>
+    <div class="bg-surface-container rounded-xl p-space-md"><h3 class="font-headline-sm text-headline-sm font-semibold mb-1">Validation</h3><p id="mVal" class="font-body-sm text-body-sm text-on-surface-variant"></p></div>
+    <div class="bg-surface-container rounded-xl p-space-md"><h3 class="font-headline-sm text-headline-sm font-semibold mb-1">Limits</h3><p class="font-body-sm text-body-sm text-on-surface-variant">Trained on English-language, US-origin scripted series. Other languages, countries, or reality shows are outside its scope. For an unreleased series, cast and crew are often only partly announced; the Data completeness panel shows what was found, and missing inputs lower reliability.</p></div>
+    <div class="bg-surface-container rounded-xl p-space-md"><h3 class="font-headline-sm text-headline-sm font-semibold mb-1">Course project</h3><p class="font-body-sm text-body-sm text-on-surface-variant">Built for a classical machine-learning course. Models are scikit-learn pipelines, published on Hugging Face. Not financial or professional advice.</p></div>
+  </div>
+</section>
+</div>
+</main>
+
+<footer class="w-full bg-surface-container-lowest py-space-xl px-gutter lg:px-gutter-lg">
+  <div class="max-w-7xl mx-auto flex flex-col gap-space-sm font-body-sm text-body-sm text-on-surface-variant">
+    <p>Runs entirely in your browser: the models are downloaded once, and the only lookups sent out are to TMDB and OMDb.</p>
+    <p>Estimate based on pre-release information only. Not a guarantee. Models trained on English-language, US-origin scripted series, 2015 to 2025.</p>
+    <p>This product uses the TMDB API but is not endorsed or certified by TMDB. Information courtesy of IMDb (<a class="underline hover:text-on-surface" href="https://www.imdb.com" target="_blank" rel="noopener">imdb.com</a>), used for non-commercial, educational purposes.</p>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+<script src="engine.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const TARGET = {combined:"combined_score", imdb:"imdb_rating", tmdb:"tmdb_rating"};
+const LABEL = {combined:"General (combined)", imdb:"IMDb", tmdb:"TMDB"};
+const COLOR = {combined:"primary", imdb:"secondary", tmdb:"on-surface-variant"};
+let META = {targets:{}}, HEALTH = null, LAST = null, model = "combined", showAll = false, loading = false, timer = null;
+const mt = m => (META.targets || {})[TARGET[m]] || {};
+const f2 = x => (x == null ? "n/a" : Number(x).toFixed(2));
+const f3 = x => (x == null ? "n/a" : Number(x).toFixed(3));
+const pct = x => (x == null ? "n/a" : (100 * x).toFixed(1) + "%");
+
+/* ---------- boot ---------- */
+const CFG = (() => { const c = {...(window.APP_CONFIG || {})}; for (const k of ["TMDB_API_KEY", "OMDB_API_KEY"]) if (!c[k] || /^PASTE/i.test(c[k])) c[k] = ""; return c; })();
+let ASSETS = null, ASSETS_P = null, TMDB = null, OMDB = null;
+async function boot() {
+  TMDB = Engine.makeTmdb(CFG); OMDB = Engine.makeOmdb(CFG);
+  HEALTH = {ok: false, loading: true, tmdb: TMDB.enabled, omdb: OMDB.enabled, problems: []};
+  renderStatusChip(); renderTabs(); renderBench();
+  // the trained models, metadata and cast/crew history load once (the browser caches them afterwards)
+  ASSETS_P = Engine.loadAssets("assets/").then(a => { ASSETS = a; META = a.meta || {targets: {}}; HEALTH.ok = true; HEALTH.loading = false; renderStatusChip(); renderTabs(); renderBench(); return a; })
+    .catch(e => { HEALTH.loading = false; HEALTH.problems.push(e.message || "Could not load the models"); renderStatusChip(); throw e; });
+  ASSETS_P.catch(() => {});
+  const today = new Date().toISOString().slice(0, 10);
+  (TMDB.enabled ? TMDB.upcoming(today).catch(() => []) : Promise.resolve([])).then(renderPresets);
+  const id = new URLSearchParams(location.search).get("id");
+  if (id) { $("#imdbInput").value = id; validate(); run(); }
+}
+function renderStatusChip() {
+  const el = $("#statusChip"), issues = [...(HEALTH.problems || []), ...(HEALTH.tmdb ? [] : ["TMDB key missing in config.js"])];
+  el.title = issues.join(" | ");
+  const live = HEALTH.ok && HEALTH.tmdb;
+  el.innerHTML = HEALTH.loading ? '<span class="w-2 h-2 rounded-full bg-outline animate-pulse"></span><span class="font-medium text-on-surface">Loading models…</span>'
+    : live ? '<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span><span class="font-medium text-on-surface">Live</span>'
+    : '<span class="w-2 h-2 rounded-full bg-secondary"></span><span class="font-medium text-on-surface">Setup incomplete</span>';
+  const t = META.train_years ? `Random Forest · trained ${META.train_years} · ${META.n_series_total || ""} series` : "";
+  $("#trainBadge").textContent = t;
+  $("#mData").textContent = `Series from IMDb's public datasets and the TMDB API: ${META.n_series_total || "about 3,000"} English-language, US-origin scripted series that premiered 2015 to 2025 and have at least 1,000 IMDb votes.`;
+  $("#mVal").textContent = `Time-based: models were tuned on expanding yearly folds inside ${META.train_years || "2015-2022"} (train on earlier years, validate on the next), then scored once on ${META.test_years || "2023-2025"}.`;
+}
+function renderTabs() {
+  $("#modelTabs").innerHTML = Object.keys(TARGET).map(k => {
+    const mae = mt(k).model_test_mae, on = k === model;
+    return `<button role="tab" aria-selected="${on}" data-m="${k}" class="model-tab px-space-md py-1.5 rounded font-label-md text-label-md transition-all ${on ? "bg-primary-container text-on-primary-container font-semibold" : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high font-medium"}">${LABEL[k]}<span class="${on ? "opacity-80" : "text-outline"} text-body-sm font-body-sm ml-1.5 font-normal">${mae ? "±" + f2(mae) + " MAE" : ""}</span></button>`;
+  }).join("");
+  document.querySelectorAll(".model-tab").forEach(b => b.onclick = () => { model = b.dataset.m; renderTabs(); if (LAST && LAST.ok) renderResult(); });
+}
+function renderPresets(items) {
+  $("#presets").innerHTML = items.length ? items.map(i => `<button type="button" data-id="${esc(i.imdb_id)}" class="preset px-space-sm py-1 rounded-md bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors flex items-center gap-1"><span>${esc(i.title)}</span><span class="text-outline text-body-sm font-body-sm">${esc(i.date || "")}</span></button>`).join("")
+    : '<span class="text-outline font-body-sm text-body-sm">Paste any IMDb link above (suggestions need the server TMDB key).</span>';
+  document.querySelectorAll(".preset").forEach(b => b.onclick = () => { $("#imdbInput").value = b.dataset.id; validate(); run(); });
+}
+$("#showAllModelsToggle").onchange = e => { showAll = e.target.checked; if (LAST && LAST.ok) renderResult(); };
+
+/* ---------- input ---------- */
+function validate() {
+  const v = $("#imdbInput").value.trim(), ok = /tt\d{7,9}/.test(v), el = $("#validationIndicator");
+  el.className = (v ? (ok ? "text-primary" : "text-secondary") : "text-outline") + " font-label-sm text-label-sm flex items-center gap-1";
+  el.innerHTML = v ? (ok ? '<span class="material-symbols-outlined text-[14px]">check_circle</span>Valid IMDb id found' : '<span class="material-symbols-outlined text-[14px]">error</span>No IMDb id found (tt + 7 to 9 digits)')
+                    : '<span class="material-symbols-outlined text-[14px]">info</span>Format: tt followed by 7 to 9 digits';
+  return ok;
+}
+$("#imdbInput").oninput = validate;
+$("#imdbInput").onkeydown = e => { if (e.key === "Enter") run(); };
+$("#clearInputBtn").onclick = () => { $("#imdbInput").value = ""; validate(); $("#imdbInput").focus(); };
+$("#estimateBtn").onclick = run;
+
+/* ---------- pipeline tracker ---------- */
+const STEPS = ["TMDB metadata fetch", "Credits resolution", "Feature vector build", "Model inference"];
+function drawSteps(states) {
+  $("#pipeSteps").innerHTML = STEPS.map((n, i) => {
+    const s = states[i] || {state: "idle"};
+    const badge = s.state === "ok" ? "bg-primary-container text-on-primary-container" : s.state === "fail" ? "bg-error-container text-on-error-container" : s.state === "run" ? "bg-surface-container-highest text-primary" : "bg-surface-container-highest text-outline";
+    const icon = s.state === "ok" ? '<span class="material-symbols-outlined text-primary text-[18px] ml-auto">check</span>' : s.state === "fail" ? '<span class="material-symbols-outlined text-error text-[18px] ml-auto">close</span>' : s.state === "run" ? '<span class="material-symbols-outlined text-primary text-[18px] ml-auto spin">progress_activity</span>' : "";
+    return `<div class="flex items-start gap-space-sm p-space-sm rounded-lg bg-surface-container"><span class="flex-shrink-0 w-6 h-6 rounded-full ${badge} font-label-sm text-label-sm font-bold flex items-center justify-center">${i + 1}</span><div class="flex flex-col min-w-0"><span class="font-label-md text-label-md text-on-surface font-medium">${n}</span><span class="font-body-sm text-body-sm text-on-surface-variant">${esc(s.detail || (s.state === "run" ? "running…" : "waiting"))}</span></div>${icon}</div>`;
+  }).join("");
+}
+function startTicker() {
+  let i = 0; const st = []; $("#pipelineTracker").classList.remove("hidden"); $("#pipeSummary").textContent = "";
+  const tick = () => { st.length = 0; for (let k = 0; k < STEPS.length; k++) st.push({state: k < i ? "ok" : k === i ? "run" : "idle", detail: k < i ? "done" : ""}); drawSteps(st); i = Math.min(i + 1, STEPS.length - 1); };
+  tick(); timer = setInterval(tick, 900);
+}
+function stopTicker(log, ok) {
+  clearInterval(timer);
+  const st = STEPS.map((_, i) => log[i] ? {state: log[i].ok ? "ok" : "fail", detail: `${log[i].detail} (${log[i].ms} ms)`} : {state: "idle", detail: ok ? "" : "not reached"});
+  drawSteps(st); const tot = log.reduce((a, b) => a + b.ms, 0);
+  $("#pipeSummary").textContent = `${log.length} / ${STEPS.length} stages resolved (${tot} ms)`;
+}
+
+/* ---------- run ---------- */
+function setLoading(on) {
+  loading = on; const b = $("#estimateBtn"); b.disabled = on;
+  $("#btnIcon").textContent = on ? "progress_activity" : "auto_awesome"; $("#btnIcon").classList.toggle("spin", on);
+  $("#btnText").textContent = on ? "Estimating…" : "Estimate rating";
+}
+function showAlert(msg, kind = "error") {
+  const c = kind === "error" ? ["bg-error-container/30", "text-error", "error"] : ["bg-secondary/10", "text-secondary", "info"];
+  $("#alertBox").className = `${c[0]} rounded-xl p-space-md flex items-start gap-space-sm fadein`;
+  $("#alertBox").innerHTML = `<span class="material-symbols-outlined ${c[1]} text-[22px]">${c[2]}</span><p class="font-body-md text-body-md text-on-surface">${esc(msg)}</p>`;
+}
+async function run() {
+  if (loading) return;
+  $("#alertBox").className = "hidden"; $("#result").innerHTML = "";
+  if (!validate()) { showAlert("Paste an IMDb link such as https://www.imdb.com/title/tt1234567/ or just the ID (tt1234567)."); return; }
+  setLoading(true); startTicker();
+  try {
+    if (!ASSETS) $("#pipeSummary").textContent = "loading the models in your browser (first visit only)…";
+    await ASSETS_P;
+    const j = await Engine.estimate($("#imdbInput").value.trim(), {assets: ASSETS, tmdb: TMDB, omdb: OMDB});
+    LAST = j; stopTicker(j.pipeline || [], j.ok);
+    const id = ($("#imdbInput").value.match(/tt\d{7,9}/) || [""])[0]; history.replaceState(null, "", `?id=${id}`);
+    if (j.ok) renderResult(); else renderRejected(j);
+  } catch (e) { clearInterval(timer); $("#pipelineTracker").classList.add("hidden"); showAlert(e.message || "Something went wrong."); }
+  finally { setLoading(false); }
+}
+function renderRejected(j) {
+  showAlert(j.reason || "This title can't be estimated.", "info");
+  if (j.series) $("#result").innerHTML = `<div class="bg-surface-container rounded-xl p-space-md flex items-center gap-space-md fadein">${j.series.poster ? `<img class="w-16 rounded-lg" alt="" src="${esc(j.series.poster)}">` : ""}<div><div class="font-headline-sm text-headline-sm font-semibold">${esc(j.series.title)}</div><div class="font-body-sm text-body-sm text-outline">IMDb ${esc(j.series.imdb_id)}</div></div></div>`;
+}
+
+/* ---------- result ---------- */
+function prettyFeature(f) {
+  const fixed = {runtime_min: "Episode runtime", s1_episode_count: "Season 1 episode count", premiere_month: "Premiere month", is_adaptation: "Adaptation (book, comic, game)", is_streaming_original: "Streaming original", is_coproduction: "International co-production", has_other_language: "Uses other languages", is_true_story: "Based on a true story", is_remake_or_reboot: "Remake or reboot", is_spinoff: "Spin-off"};
+  if (fixed[f]) return fixed[f];
+  let m = f.match(/^imdb_(cast|creative)_prior_(avg|best|count|debut|lv)$/);
+  if (m) return `${m[1] === "cast" ? "Cast" : "Creative team"}: ${({avg: "average prior rating", best: "best prior rating", count: "number of prior titles", debut: "share of newcomers", lv: "fame (log votes)"})[m[2]]}`;
+  m = f.match(/^(genre|network_name|network_type|age_rating|title_type)_(.+)$/);
+  if (m) return `${({genre: "Genre", network_name: "Network", network_type: "Network type", age_rating: "Age rating", title_type: "Format"})[m[1]]}: ${m[2].replace(/_/g, " ")}`;
+  return f;
+}
+function scoreColor(s) { return s >= 7.8 ? "text-primary" : s >= 6.5 ? "text-secondary" : "text-tertiary"; }
+
+function renderResult() {
+  const r = LAST, s = r.series, p = r.predictions[model], t = mt(model), el = r.eligibility, sc = r.scope;
+  const cards = `<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md fadein">
+    ${card("calendar_clock", "bg-secondary/15 text-secondary", "text-secondary", "Production status", el.label, el.detail)}
+    ${card("verified", "bg-primary-container/20 text-primary", "text-primary", "Eligibility accepted", s.status || "In production", `Data completeness ${Math.round(r.completeness * 100)}%`)}
+    ${card(sc.in_scope ? "radar" : "warning", sc.in_scope ? "bg-surface-container-highest text-on-surface" : "bg-secondary/15 text-secondary", sc.in_scope ? "text-on-surface-variant" : "text-secondary", "Training domain match", sc.label, sc.detail)}
+  </div>`;
+  const warn = (r.warnings || []).map(w => `<div class="bg-secondary/10 rounded-xl p-space-sm flex gap-space-sm items-start font-body-sm text-body-sm text-on-surface-variant"><span class="material-symbols-outlined text-secondary text-[18px]">info</span>${esc(w)}</div>`).join("");
+  const rel = r.released ? `<div class="bg-surface-container-high rounded-xl p-space-md flex flex-wrap items-center gap-space-md fadein"><span class="material-symbols-outlined text-secondary">history</span><div class="font-body-sm text-body-sm text-on-surface-variant"><strong class="text-on-surface">Already released.</strong> Actual ratings today: TMDB <strong class="text-on-surface">${r.released.tmdb_rating ? f2(r.released.tmdb_rating) : "n/a"}</strong>${r.released.tmdb_votes ? ` (${r.released.tmdb_votes} votes)` : ""}, IMDb <strong class="text-on-surface">${r.released.imdb_rating ? f2(r.released.imdb_rating) : "n/a"}</strong>${r.released.imdb_votes ? ` (${esc(r.released.imdb_votes)} votes)` : ""}. Compare them with the estimates below.</div></div>` : "";
+  const people = (label, arr) => arr && arr.length ? `<div><span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">${label}:</span><p class="font-body-sm text-body-sm text-on-surface-variant">${arr.map(esc).join(", ")}</p></div>` : "";
+  const poster = s.poster ? `<img class="w-full h-full object-cover" alt="Poster of ${esc(s.title)}" src="${esc(s.poster)}">` : '<div class="w-full h-full flex items-center justify-center text-outline"><span class="material-symbols-outlined text-[48px]">movie</span></div>';
+  const hero = `<div class="bg-surface-container rounded-xl p-space-lg shadow-2xl relative fadein"><div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-center">
+    <div class="lg:col-span-5 flex flex-col sm:flex-row gap-space-lg items-center sm:items-start">
+      <div class="relative w-44 h-64 sm:w-48 sm:h-72 rounded-xl overflow-hidden flex-shrink-0 shadow-xl bg-surface-container-lowest">${poster}${s.network ? `<span class="absolute bottom-2 left-2 px-space-xs py-0.5 rounded bg-surface/80 text-secondary font-label-sm text-label-sm uppercase tracking-wider">${esc(s.network)}</span>` : ""}</div>
+      <div class="flex flex-col gap-space-xs text-center sm:text-left min-w-0">
+        <div class="flex flex-wrap items-center justify-center sm:justify-start gap-space-xs">${(s.genres || []).slice(0, 4).map(g => `<span class="px-space-xs py-0.5 rounded-full bg-surface-container-high text-on-surface font-label-sm text-label-sm">${esc(g)}</span>`).join("")}</div>
+        <h2 class="font-headline-lg text-headline-lg text-on-surface font-extrabold tracking-tight mt-1">${esc(s.title)}</h2>
+        <p class="font-body-sm text-body-sm text-outline">IMDb ${esc(s.imdb_id)}${s.episodes_s1 ? ` · ${s.episodes_s1} episodes in season 1` : ""}${s.first_air_date ? ` · ${esc(s.first_air_date)}` : ""}</p>
+        <div class="pt-space-sm space-y-space-xs">${people("Creators / key crew", s.creators)}${people("Lead cast", s.cast)}${s.overview ? `<p class="font-body-sm text-body-sm text-on-surface-variant clamp3 pt-1">${esc(s.overview)}</p>` : ""}</div>
+      </div></div>
+    <div class="lg:col-span-7 flex flex-col gap-space-md">${showAll ? triple(r) : single(p, t)}</div>
+  </div></div>`;
+  $("#result").innerHTML = cards + warn + rel + hero + dist(p, t) + `<div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg fadein">${drivers(t)}${audit(r)}</div>`;
+  requestAnimationFrame(() => { const d = $("#dial"); if (d) d.style.strokeDashoffset = 314.159 * (1 - p.score / 10); });
+}
+function card(icon, boxCls, labCls, lab, title, sub) {
+  return `<div class="bg-surface-container-high/60 backdrop-blur-md rounded-xl p-space-md flex items-center gap-space-md"><div class="w-10 h-10 rounded-lg ${boxCls} flex items-center justify-center flex-shrink-0"><span class="material-symbols-outlined text-[24px]">${icon}</span></div><div class="flex flex-col min-w-0"><span class="font-label-sm text-label-sm ${labCls} uppercase tracking-wider font-semibold">${lab}</span><span class="font-headline-sm text-headline-sm text-on-surface">${esc(title)}</span><span class="font-body-sm text-body-sm text-on-surface-variant">${esc(sub)}</span></div></div>`;
+}
+function single(p, t) {
+  const edge = t.baseline_test_mae && t.model_test_mae ? t.baseline_test_mae - t.model_test_mae : null;
+  const r80 = p.range_80 ? `<p class="font-body-sm text-body-sm text-on-surface-variant">On series the model had never seen, about <strong class="text-on-surface font-medium">80%</strong> of true scores landed between <strong class="text-on-surface font-medium">${f2(p.range_80[0])}</strong> and <strong class="text-on-surface font-medium">${f2(p.range_80[1])}</strong> when the estimate was ${f2(p.score)}.</p>` : "";
+  return `<div class="flex flex-col sm:flex-row items-center gap-space-xl p-space-md bg-surface-container-low rounded-xl">
+    <div class="relative w-44 h-44 flex-shrink-0 flex items-center justify-center">
+      <svg class="w-full h-full transform -rotate-90" viewBox="0 0 120 120" role="img" aria-label="Predicted score ${f2(p.score)} out of 10"><circle class="text-surface-container-highest" cx="60" cy="60" fill="none" r="50" stroke="currentColor" stroke-width="9"></circle><circle id="dial" class="${scoreColor(p.score)} dial" cx="60" cy="60" fill="none" r="50" stroke="currentColor" stroke-dasharray="314.159" stroke-dashoffset="314.159" stroke-linecap="round" stroke-width="9"></circle></svg>
+      <div class="absolute inset-0 flex flex-col items-center justify-center text-center"><span class="font-metric-xl text-metric-xl ${scoreColor(p.score)} font-black tracking-tight leading-none">${p.score.toFixed(1)}</span><span class="font-label-sm text-label-sm text-outline uppercase mt-0.5 tracking-wider">Out of 10</span></div></div>
+    <div class="flex flex-col gap-space-xs text-center sm:text-left flex-1">
+      <div class="flex flex-wrap items-center justify-center sm:justify-start gap-space-sm mb-1"><span class="px-space-sm py-0.5 rounded-full bg-secondary/15 text-secondary font-label-sm text-label-sm uppercase tracking-wider font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">warning</span>A rough estimate, not a precise forecast</span></div>
+      <div class="flex flex-col sm:flex-row sm:items-baseline gap-2"><h3 class="font-headline-md text-headline-md text-on-surface font-bold tracking-tight">${p.range_mae ? f2(p.range_mae[0]) + " – " + f2(p.range_mae[1]) : f2(p.score)}</h3><span class="${scoreColor(p.score)} font-headline-sm text-headline-sm font-semibold">(${f2(p.score)}${p.test_mae ? " ± " + f2(p.test_mae) + " MAE" : ""})</span></div>
+      <p class="font-body-sm text-body-sm text-on-surface-variant">${esc(LABEL[model])} model · ${esc(p.model)}</p>${r80}
+      <div class="mt-space-sm p-space-sm rounded-lg bg-surface-container-highest/40 border border-outline-variant/30 flex flex-col gap-space-xs text-left">
+        <div class="flex items-center justify-between pb-1 border-b border-outline-variant/30"><span class="font-label-sm text-label-sm text-primary uppercase font-bold tracking-wider flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">analytics</span>Model reliability</span><span class="font-label-sm text-label-sm text-on-surface-variant">Hold-out ${esc(META.test_years || "")} · ${t.n_test || ""} series</span></div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs pt-1">
+          ${mini("Test MAE", t.model_test_mae != null ? "±" + f2(t.model_test_mae) : "n/a", t.baseline_test_mae != null ? `vs ±${f2(t.baseline_test_mae)} for guessing the mean` : "", edge != null ? `${edge >= 0 ? "" : "-"}${Math.abs(edge).toFixed(3)} better than the mean` : "")}
+          ${mini("R² score", f2(t.test_r2), "Share of variation explained", t.test_r2 != null ? `About ${Math.round(Math.max(0, t.test_r2) * 100)}% of it` : "")}
+          ${mini("Within ±0.5 points", pct(t.within_0_5), t.baseline_within_0_5 != null ? `vs ${pct(t.baseline_within_0_5)} for guessing the mean` : "", "")}
+        </div>
+        <div class="mt-1 pt-1.5 border-t border-outline-variant/20 flex items-start gap-1.5"><span class="material-symbols-outlined text-outline text-[16px] flex-shrink-0 mt-0.5">info</span><p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed"><strong class="text-on-surface font-medium">Why the range is wide:</strong> before release almost nothing about audience reception is known, so estimates cluster near the average score and the model beats a plain average only slightly.</p></div>
+      </div></div></div>`;
+}
+function mini(a, b, c, d) { return `<div class="bg-surface-container-lowest/60 p-space-xs rounded flex flex-col"><span class="text-label-sm text-outline">${a}</span><span class="text-primary font-bold font-label-md text-label-md mt-0.5">${b}</span><span class="text-[11px] text-on-surface-variant">${c}</span><span class="text-[11px] text-primary/80">${d}</span></div>`; }
+function triple(r) {
+  return `<div class="grid grid-cols-1 sm:grid-cols-3 gap-space-sm">${Object.keys(TARGET).map(k => {
+    const p = r.predictions[k], t = mt(k), c = COLOR[k];
+    return `<div class="bg-surface-container-low p-space-md rounded-xl flex flex-col gap-space-xs relative overflow-hidden"><div class="w-1.5 h-full bg-${c} absolute left-0 top-0"></div><span class="font-label-sm text-label-sm text-${c} uppercase font-bold tracking-wider pl-1">${LABEL[k]}</span><span class="font-metric-md text-metric-md text-${c} font-black leading-none pl-1">${p.score.toFixed(1)} <span class="text-body-sm font-normal text-outline">/ 10</span></span><span class="font-body-sm text-body-sm text-on-surface-variant pl-1">Range: ${p.range_mae ? f2(p.range_mae[0]) + " – " + f2(p.range_mae[1]) : "n/a"}</span><span class="text-label-sm font-label-sm text-outline pl-1">Test MAE ±${f2(t.model_test_mae)} · R² ${f2(t.test_r2)}</span></div>`; }).join("")}
+    <p class="sm:col-span-3 font-body-sm text-body-sm text-on-surface-variant">The three models usually agree within a few tenths of a point. Differences between them are mostly noise, not a real disagreement about the series.</p></div>`;
+}
+function dist(p, t) {
+  const h = t.hist; if (!h || !h.edges) return "";
+  const W = 800, H = 150, pad = 24, e = h.edges, c = h.counts, mx = Math.max(...c), x0 = e[0], x1 = e[e.length - 1];
+  const X = v => pad + (v - x0) / (x1 - x0) * (W - 2 * pad), bw = (W - 2 * pad) / c.length;
+  const bars = c.map((n, i) => `<rect x="${(pad + i * bw + 1).toFixed(1)}" y="${(H - 24 - (n / mx) * (H - 44)).toFixed(1)}" width="${(bw - 2).toFixed(1)}" height="${((n / mx) * (H - 44)).toFixed(1)}" rx="1.5" fill="#2d3449"/>`).join("");
+  const ticks = [2, 4, 6, 8, 10].map(v => `<text x="${X(v)}" y="${H - 6}" text-anchor="middle" fill="#86948a" font-size="11">${v}</text>`).join("");
+  const mean = t.mean != null ? `<line x1="${X(t.mean)}" x2="${X(t.mean)}" y1="14" y2="${H - 24}" stroke="#86948a" stroke-dasharray="4 4"/><text x="${X(t.mean) + 5}" y="22" fill="#86948a" font-size="11">average ${f2(t.mean)}</text>` : "";
+  const pc = p.percentile;
+  return `<div class="bg-surface-container rounded-xl p-space-md fadein"><div class="flex flex-wrap items-baseline justify-between gap-1 mb-space-sm"><h3 class="font-headline-sm text-headline-sm font-semibold">Where this estimate falls</h3><span class="font-body-sm text-body-sm text-on-surface-variant">${pc != null ? `Higher than <strong class="text-on-surface">${pc}%</strong> of the ${t.n_series || ""} series in the training data` : ""}</span></div>
+    <svg viewBox="0 0 ${W} ${H}" class="w-full" role="img" aria-label="Distribution of scores with the estimate marked">${bars}${mean}<line x1="${X(p.score)}" x2="${X(p.score)}" y1="8" y2="${H - 24}" stroke="#4edea3" stroke-width="3"/><circle cx="${X(p.score)}" cy="8" r="5" fill="#4edea3"/><text x="${Math.min(X(p.score) + 8, W - 90)}" y="16" fill="#4edea3" font-size="12" font-weight="700">estimate ${f2(p.score)}</text>${ticks}</svg>
+    <p class="font-body-sm text-body-sm text-outline mt-1">Position among real scores, not a quality ranking. Estimates cluster near the middle because pre-release data carries little signal.</p></div>`;
+}
+function drivers(t) {
+  const imp = (t.importance || []).slice(0, 8), mx = Math.max(0.0001, ...imp.map(i => i.importance));
+  return `<div class="bg-surface-container rounded-xl p-space-lg"><div class="flex items-center justify-between mb-space-md"><h3 class="font-headline-sm text-headline-sm font-semibold flex items-center gap-space-sm"><span class="material-symbols-outlined text-primary">bar_chart</span>What the model relies on</h3><span class="px-space-xs py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">Hold-out set</span></div>
+    <div class="space-y-space-sm">${imp.map((i, k) => `<div><div class="flex justify-between font-label-md text-label-md mb-1"><span class="text-on-surface">${k + 1}. ${esc(prettyFeature(i.feature))}</span><span class="text-primary font-bold">+${Number(i.importance).toFixed(4)} MAE</span></div><div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full" style="width:${Math.max(3, 100 * i.importance / mx)}%"></div></div></div>`).join("") || '<p class="text-outline">No importance data loaded.</p>'}</div>
+    <p class="font-body-sm text-body-sm text-outline mt-space-md flex gap-1.5"><span class="material-symbols-outlined text-[16px]">shield</span>Global permutation importance: how much the model's error grows when this input is shuffled. It describes the model in general, not this one prediction. Even the top inputs move the error by only about a hundredth of a point.</p></div>`;
+}
+function audit(r) {
+  const col = {found: ["bg-primary-container/20 text-primary", "Found"], partial: ["bg-secondary/15 text-secondary", "Partial"], imputed: ["bg-secondary/15 text-secondary", "Assumed"], missing: ["bg-surface-container-highest text-outline", "Missing"]};
+  const dot = {found: "bg-primary", partial: "bg-secondary", imputed: "bg-secondary", missing: "bg-outline"};
+  return `<div class="bg-surface-container rounded-xl p-space-lg"><div class="flex items-center justify-between mb-space-md"><h3 class="font-headline-sm text-headline-sm font-semibold flex items-center gap-space-sm"><span class="material-symbols-outlined text-primary">fact_check</span>Data completeness</h3><span class="px-space-xs py-0.5 rounded bg-primary-container/20 text-primary font-label-sm text-label-sm font-bold">${Math.round(r.completeness * 100)}% of inputs found</span></div>
+    <ul class="space-y-space-sm">${r.audit.map(a => `<li class="flex items-start gap-space-sm"><span class="w-2 h-2 rounded-full ${dot[a.status]} mt-2 flex-shrink-0"></span><div class="flex-1 min-w-0"><div class="font-label-md text-label-md text-on-surface">${esc(a.label)}</div><div class="font-body-sm text-body-sm text-on-surface-variant">${esc(a.detail)}</div></div><span class="px-space-xs py-0.5 rounded ${col[a.status][0]} font-label-sm text-label-sm flex-shrink-0">${col[a.status][1]}</span></li>`).join("")}</ul>
+    <p class="font-body-sm text-body-sm text-outline mt-space-md flex gap-1.5"><span class="material-symbols-outlined text-[16px]">tune</span>Missing inputs are left empty and the model fills them with typical values, which lowers reliability. Unreleased series often have little announced yet.</p></div>`;
+}
+function renderBench() {
+  const rows = Object.keys(TARGET).map(k => ({k, t: mt(k)})).filter(x => x.t.model_test_mae != null);
+  $("#benchTable").innerHTML = `<thead><tr class="text-outline uppercase text-label-sm font-label-sm tracking-wider">${["Model", "Algorithm", "Hold-out series", "Baseline MAE", "Model MAE", "Improvement", "R²", "Within ±0.5"].map(h => `<th class="px-space-md py-space-sm font-semibold">${h}</th>`).join("")}</tr></thead><tbody>${rows.map(({k, t}) => `<tr class="border-t border-outline-variant/30"><td class="px-space-md py-space-sm text-on-surface font-medium">${LABEL[k]}</td><td class="px-space-md py-space-sm text-on-surface-variant">${esc(t.model_type || "")}</td><td class="px-space-md py-space-sm">${t.n_test ?? ""}</td><td class="px-space-md py-space-sm">${f3(t.baseline_test_mae)}</td><td class="px-space-md py-space-sm text-primary font-semibold">${f3(t.model_test_mae)}</td><td class="px-space-md py-space-sm">${(100 * (1 - t.model_test_mae / t.baseline_test_mae)).toFixed(1)}%</td><td class="px-space-md py-space-sm">${f3(t.test_r2)}</td><td class="px-space-md py-space-sm">${pct(t.within_0_5)} <span class="text-outline">(base ${pct(t.baseline_within_0_5)})</span></td></tr>`).join("") || '<tr><td class="px-space-md py-space-md text-outline">Metrics not loaded.</td></tr>'}</tbody>`;
+}
+validate(); boot();
+</script>
+</body></html>
