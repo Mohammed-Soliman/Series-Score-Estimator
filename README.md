@@ -131,4 +131,4 @@ the JavaScript engine reproduces scikit-learn's predictions and the Python featu
 
 ## License
 
-Not set yet. Choose a license for the code before making the repository public.
+MIT.
